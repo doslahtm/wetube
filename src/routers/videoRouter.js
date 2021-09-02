@@ -7,7 +7,11 @@ import {
   postUpload,
   deleteVideo,
 } from "../controllers/videoController";
-import {protectorMiddleware, videoUpload} from "../middlewares";
+import {
+  protectorMiddleware,
+  videoUpload,
+  sharedbufferMiddleware,
+} from "../middlewares";
 
 const videoRouter = express.Router();
 
@@ -23,7 +27,7 @@ videoRouter
   .get(deleteVideo);
 videoRouter
   .route("/upload")
-  .all(protectorMiddleware)
+  .all(protectorMiddleware, sharedbufferMiddleware)
   .get(getUpload)
   .post(
     videoUpload.fields([

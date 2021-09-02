@@ -7,7 +7,7 @@ block content
         if !loggedInUser.avatarUrl
             span.profile__data__no-avatar 🤗
         else 
-            img(src="/" + user.avatarUrl)
+            img(src=user.avatarUrl)
         h3=user.name
     div.video-grid
         each video in user.videos 
