@@ -18,7 +18,7 @@ header
                         if !loggedInUser.avatarUrl
                             span.header__no-avatar 🤗
                         else 
-                            if loggedInUser.avatarUrl.includes('https://dotube.s3.ap-northeast-2.amazonaws.com/')
+                            if loggedInUser.avatarUrl.includes('dotube.s3')
                                 img.header__avatar(src=loggedInUser.avatarUrl, crossorigin)
                             else 
                                 img.header__avatar(src="/" + loggedInUser.avatarUrl)
