@@ -2,8 +2,6 @@ import User from "../models/User";
 import Video from "../models/Video";
 import fetch from "node-fetch";
 import bcrypt from "bcrypt";
-import fs from "fs";
-import path from "path";
 
 export const getJoin = (req, res) => res.render("join", {pageTitle: "Join"});
 export const postJoin = async (req, res) => {
@@ -169,33 +167,8 @@ export const postEdit = async (req, res) => {
       });
     }
   }
-  const isHeroku = process.env.NODE_ENV === "production";
+  const isHeroku = true; //process.env.NODE_ENV === "production";
   console.log(file);
-  if (file.path && avatarUrl) {
-    const filePath = path.join(__dirname, "../../", avatarUrl);
-    fs.access(filePath, fs.constants.F_OK, (err) => {
-      if (err) return console.log(err);
-
-      fs.unlink(filePath, (err) =>
-        err
-          ? console.log(err)
-          : console.log(`${filePath} 를 정상적으로 삭제했습니다`)
-      );
-    });
-  } else if (file.location && avatarUrl) {
-    s3.deleteObject(
-      {
-        Bucket: "dotube",
-        Key: `images/${avatarURL.split("/")[4]}`,
-      },
-      (err, data) => {
-        if (err) {
-          throw err;
-        }
-        console.log(`s3 deleteObject`, data);
-      }
-    );
-  }
   const updatedUser = await User.findByIdAndUpdate(
     _id,
     {
