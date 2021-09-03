@@ -3,8 +3,10 @@ import multerS3 from "multer-s3";
 import aws from "aws-sdk";
 import fs from "fs";
 import path from "path";
+import Video from "./models/Video";
+import {async} from "regenerator-runtime";
 
-const isHeroku = true; //process.env.NODE_ENV === "production";
+const isHeroku = process.env.NODE_ENV === "production";
 
 const s3 = new aws.S3({
   credentials: {
@@ -67,7 +69,7 @@ export const videoUpload = multer({
   storage: isHeroku ? s3VideoUploader : undefined,
 });
 
-export const sharedbufferMiddleware = (req, res, next) => {
+export const sharedbufferMiddleware = async (req, res, next) => {
   res.header("Cross-Origin-Embedder-Policy", "require-corp");
   res.header("Cross-Origin-Opener-Policy", "same-origin");
   next();
@@ -77,7 +79,7 @@ export const s3DeleteAvatarMiddleware = (req, res, next) => {
   if (!req.file) {
     return next();
   }
-  if (req.file.path && req.session.user.avatarUrl) {
+  if (!isHeroku && req.session.user.avatarUrl) {
     const filePath = path.join(__dirname, "../", req.session.user.avatarUrl);
     fs.access(filePath, fs.constants.F_OK, (err) => {
       if (err) return console.log(err);
@@ -88,7 +90,7 @@ export const s3DeleteAvatarMiddleware = (req, res, next) => {
           : console.log(`${filePath} 를 정상적으로 삭제했습니다`)
       );
     });
-  } else if (req.file.location && req.session.user.avatarUrl) {
+  } else if (isHeroku && req.session.user.avatarUrl) {
     s3.deleteObject(
       {
         Bucket: "dotube",
@@ -101,6 +103,70 @@ export const s3DeleteAvatarMiddleware = (req, res, next) => {
         console.log(`s3 deleteObject`, data);
       }
     );
+  }
+  next();
+};
+
+export const s3DeleteVideoMiddleware = async (req, res, next) => {
+  const {id} = req.params;
+  const {
+    user: {_id},
+  } = req.session;
+  const video = await Video.findById(id);
+  if (!video) {
+    req.flash("error", "No");
+    return res.redirect("/");
+  }
+  if (String(video.owner) !== String(_id)) {
+    req.flash("error", "Not authorized");
+    return res.redirect("/");
+  }
+  if (isHeroku) {
+    s3.deleteObject(
+      {
+        Bucket: "dotube",
+        Key: `videos/${video.fileUrl.split("/")[4]}`,
+      },
+      (err, data) => {
+        if (err) {
+          throw err;
+        }
+        console.log(`s3 deleteObject`, data);
+      }
+    );
+    s3.deleteObject(
+      {
+        Bucket: "dotube",
+        Key: `videos/${video.thumbUrl.split("/")[4]}`,
+      },
+      (err, data) => {
+        if (err) {
+          throw err;
+        }
+        console.log(`s3 deleteObject`, data);
+      }
+    );
+  } else {
+    const videoPath = path.join(__dirname, "../", video.fileUrl);
+    fs.access(videoPath, fs.constants.F_OK, (err) => {
+      if (err) return console.log(err);
+
+      fs.unlink(videoPath, (err) =>
+        err
+          ? console.log(err)
+          : console.log(`${videoPath} 를 정상적으로 삭제했습니다`)
+      );
+    });
+    const thumbPath = path.join(__dirname, "../", video.thumbUrl);
+    fs.access(thumbPath, fs.constants.F_OK, (err) => {
+      if (err) return console.log(err);
+
+      fs.unlink(thumbPath, (err) =>
+        err
+          ? console.log(err)
+          : console.log(`${thumbPath} 를 정상적으로 삭제했습니다`)
+      );
+    });
   }
   next();
 };
